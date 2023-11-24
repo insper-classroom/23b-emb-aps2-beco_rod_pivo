@@ -16,7 +16,7 @@ Integrantes:
 
 Nome da marca:
 
-- Bikesense
+- Bikesense:
 ![image](bikesense.png)
 
 ## Interface
