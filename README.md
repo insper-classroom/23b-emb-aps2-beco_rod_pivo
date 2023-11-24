@@ -10,13 +10,14 @@ Mais detalhes no site da disciplina:
 
 Integrantes:
 
-- Nome 
-- Nome
-- Nome
+- Alberto Carrera
+- Pedro Ivo
+- Rodrigo Medeiros
 
 Nome da marca:
 
-- Nome e logo?
+- Bikesense
+![image](bikesense.png)
 
 ## Interface
 
