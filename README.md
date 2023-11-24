@@ -32,9 +32,9 @@ Nome da marca:
 
 Descricão da primeira proposta da interface:
 - Widgets:
-> - a
- - b
- - c
+  - a
+  - b
+  - c
 - Foto da interface:
 - ![image](LVGL_img.png)
 - Foto da interface sendo executada no LCD:
