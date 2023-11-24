@@ -33,9 +33,10 @@ Nome da marca:
 
 Descricão da primeira proposta da interface:
 - Widgets:
-  - a
-  - b
-  - c
+  - IMAGE: Imagem que demonstra a aceleração;
+  - BUTTON: Botões de pause, start, restart e stop;
+  - LABEL: Todos os labels que demonstram quais informações estão sendo mostradas;
+  - ROLER: Seleção de aro e medida de distância.
 - Foto da interface:
   
   ![image](LVGL_img.png)
