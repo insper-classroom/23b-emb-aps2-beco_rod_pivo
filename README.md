@@ -31,10 +31,16 @@ Nome da marca:
 
 
 Descricão da primeira proposta da interface:
-
-- Imagem da proposta
-- Imagem da proposta no LCD
-- Vídeo explicando a interface
+- Widgets:
+ - a
+ - b
+ - c
+- Foto da interface:
+- ![image](LVGL_img.png)
+- Foto da interface sendo executada no LCD:
+- ![image](LVGL_img_lcd.jpg)
+- Vídeo explicando a interface:
+- https://youtu.be/uZa1fZPIaBw
 
 ### Proposta UX 2 - B
 
