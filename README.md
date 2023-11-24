@@ -32,7 +32,7 @@ Nome da marca:
 
 Descricão da primeira proposta da interface:
 - Widgets:
- - a
+> - a
  - b
  - c
 - Foto da interface:
