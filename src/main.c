@@ -2,7 +2,9 @@
 /* includes                                                             */
 /************************************************************************/
 
-#include "LVGL_img.h"
+#include "img_fundo.h"
+#include "img_logo.h"
+
 #include <asf.h>
 #include <string.h>
 #include "ili9341.h"
@@ -54,6 +56,9 @@ extern void vApplicationMallocFailedHook(void) {
 /* lvgl                                                                 */
 /************************************************************************/
 
+volatile lv_obj_t * labelSetValue;
+
+
 static void event_handler(lv_event_t * e) {
 	lv_event_code_t code = lv_event_get_code(e);
 
@@ -66,11 +71,19 @@ static void event_handler(lv_event_t * e) {
 }
 
 void lv_ex_btn_1(void) {
-
 	lv_obj_t * img = lv_img_create(lv_scr_act());
-	lv_img_set_src(img, &LVGL_img);
+	lv_img_set_src(img, &img_fundo);
 	lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
 	
+	lv_obj_t * img2 = lv_img_create(lv_scr_act());
+	lv_img_set_src(img2, &img_logo);
+	lv_obj_align(img2, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+
+	labelSetValue = lv_label_create(lv_scr_act());
+	lv_obj_align(labelSetValue, LV_ALIGN_LEFT_MID, -15 , -45);
+	lv_obj_set_style_text_font(labelSetValue, LV_FONT_MONTSERRAT_12, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelSetValue, lv_color_black(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelSetValue, "%02d", 22);
 }
 
 /************************************************************************/

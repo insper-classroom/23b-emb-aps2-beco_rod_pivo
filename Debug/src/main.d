@@ -1,4 +1,4 @@
-src/main.d src/main.o: ../src/main.c ../src/LVGL_img.h \
+src/main.d src/main.o: ../src/main.c ../src/img_fundo.h \
  ../src/ASF/thirdparty/lvgl8/lvgl.h \
  ../src/ASF/thirdparty/lvgl8/src/misc/lv_log.h \
  ../src/ASF/thirdparty/lvgl8/src/misc/../lv_conf_internal.h \
@@ -238,7 +238,7 @@ src/main.d src/main.o: ../src/main.c ../src/LVGL_img.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/libs/freetype/../../../lvgl.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/libs/rlottie/lv_rlottie.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/libs/rlottie/../../../lvgl.h \
- ../src/asf.h ../src/ASF/sam/drivers/afec/afec.h \
+ ../src/img_logo.h ../src/asf.h ../src/ASF/sam/drivers/afec/afec.h \
  ../src/ASF/sam/utils/compiler.h ../src/ASF/common/utils/parts.h \
  ../src/ASF/sam/utils/preprocessor/preprocessor.h \
  ../src/ASF/sam/utils/preprocessor/tpaste.h \
@@ -413,7 +413,7 @@ src/main.d src/main.o: ../src/main.c ../src/LVGL_img.h \
  ../src/ASF/sam/components/display/ili9341/ili9341.h \
  ../src/config/conf_ili9341.h ../src/touch/touch.h
 
-../src/LVGL_img.h:
+../src/img_fundo.h:
 
 ../src/ASF/thirdparty/lvgl8/lvgl.h:
 
@@ -894,6 +894,8 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 ../src/ASF/thirdparty/lvgl8/src/extra/libs/rlottie/lv_rlottie.h:
 
 ../src/ASF/thirdparty/lvgl8/src/extra/libs/rlottie/../../../lvgl.h:
+
+../src/img_logo.h:
 
 ../src/asf.h:
 
