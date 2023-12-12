@@ -30,12 +30,25 @@ static lv_indev_drv_t indev_drv;
 
 static lv_obj_t * screen;
 
+typedef struct  {
+	uint32_t year;
+	uint32_t month;
+	uint32_t day;
+	uint32_t week;
+	uint32_t hour;
+	uint32_t minute;
+	uint32_t second;
+} calendar;
+
 /************************************************************************/
 /* RTOS                                                                 */
 /************************************************************************/
 
 #define TASK_LCD_STACK_SIZE                (1024*6/sizeof(portSTACK_TYPE))
 #define TASK_LCD_STACK_PRIORITY            (tskIDLE_PRIORITY)
+
+#define TASK_RTC_STACK_SIZE				   (1024*6/sizeof(portSTACK_TYPE))
+#define TASK_RTC_STACK_PRIORITY			   (tskIDLE_PRIORITY)
 
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,  signed char *pcTaskName);
 extern void vApplicationIdleHook(void);
@@ -55,6 +68,8 @@ extern void vApplicationTickHook(void) { }
 extern void vApplicationMallocFailedHook(void) {
 	configASSERT( ( volatile void * ) NULL );
 }
+
+void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type);
 
 /************************************************************************/
 /* lvgl                                                                 */
@@ -103,6 +118,19 @@ void lv_ex_btn_1(void) {
 /* TASKS                                                                */
 /************************************************************************/
 
+static void task_rtc(void *pvParameters) {
+	/** Configura RTC */
+	calendar rtc_initial = {2018, 3, 19, 12, 15, 45 ,1};
+	RTC_init(RTC, ID_RTC, rtc_initial, 0);
+	
+	uint32_t current_hour, current_min, current_sec;
+	rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
+	
+/*	RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);*/
+	
+	
+}
+
 static void task_lcd(void *pvParameters) {
 	int px, py;
 
@@ -148,6 +176,27 @@ static void configure_console(void) {
 	/* Specify that stdout should not be buffered. */
 	setbuf(stdout, NULL);
 }
+
+void RTC_init(Rtc rtc, uint32_t id_rtc, calendar t, uint32_t irq_type) {
+	// Configura o PMC 
+	pmc_enable_periph_clk(ID_RTC);
+
+	// Default RTC configuration, 24-hour mode 
+	rtc_set_hour_mode(rtc, 0);
+
+	// Configura data e hora manualmente 
+	rtc_set_date(rtc, t.year, t.month, t.day, t.week);
+	rtc_set_time(rtc, t.hour, t.minute, t.second);
+
+	// Configure RTC interrupts 
+	NVIC_DisableIRQ(id_rtc);
+	NVIC_ClearPendingIRQ(id_rtc);
+	NVIC_SetPriority(id_rtc, 4);
+	NVIC_EnableIRQ(id_rtc);
+
+	// Ativa interrupcao via alarme 
+	rtc_enable_interrupt(rtc,  irq_type);
+	}
 
 /************************************************************************/
 /* port lvgl                                                            */
@@ -211,6 +260,10 @@ int main(void) {
 
 	/* Create task to control oled */
 	if (xTaskCreate(task_lcd, "LCD", TASK_LCD_STACK_SIZE, NULL, TASK_LCD_STACK_PRIORITY, NULL) != pdPASS) {
+		printf("Failed to create lcd task\r\n");
+	}
+	
+	if (xTaskCreate(task_rtc, "RTC", TASK_RTC_STACK_SIZE, NULL, TASK_RTC_STACK_PRIORITY, NULL) != pdPASS) {
 		printf("Failed to create lcd task\r\n");
 	}
 	
