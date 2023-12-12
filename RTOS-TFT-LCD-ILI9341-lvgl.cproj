@@ -2267,6 +2267,9 @@
     <Compile Include="src\config\conf_touch.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="src\dseg50.c">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="src\img_fundo.h">
       <SubType>compile</SubType>
     </Compile>

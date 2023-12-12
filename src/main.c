@@ -15,8 +15,10 @@
 /* LCD / LVGL                                                           */
 /************************************************************************/
 
-#define LV_HOR_RES_MAX          (320)
-#define LV_VER_RES_MAX          (240)
+#define LV_HOR_RES_MAX          (240)
+#define LV_VER_RES_MAX          (320)
+
+LV_FONT_DECLARE(dseg50);
 
 /*A static or global variable to store the buffers*/
 static lv_disp_draw_buf_t disp_buf;
@@ -79,11 +81,16 @@ void lv_ex_btn_1(void) {
 	lv_img_set_src(img2, &img_logo);
 	lv_obj_align(img2, LV_ALIGN_BOTTOM_LEFT, 0, 0);
 
+
 	labelSetValue = lv_label_create(lv_scr_act());
 	lv_obj_align(labelSetValue, LV_ALIGN_LEFT_MID, -15 , -45);
-	lv_obj_set_style_text_font(labelSetValue, LV_FONT_MONTSERRAT_12, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_font(labelSetValue, &dseg50, LV_STATE_DEFAULT);
 	lv_obj_set_style_text_color(labelSetValue, lv_color_black(), LV_STATE_DEFAULT);
 	lv_label_set_text_fmt(labelSetValue, "%02d", 22);
+
+	char *c = lv_label_get_text(labelSetValue);
+	int tempo = atoi(c);
+	lv_label_set_text_fmt(labelSetValue, "%02d", tempo + 1);
 }
 
 /************************************************************************/
