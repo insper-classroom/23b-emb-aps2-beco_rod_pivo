@@ -176,7 +176,7 @@ src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/lv_chart.d \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/list/lv_list.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/list/../../../core/lv_obj.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/list/../../layouts/flex/lv_flex.h \
- c:\users\rodri\documents\insper\5_semestre\compemb\23b-emb-aps2-beco_rod_pivo\src\asf\thirdparty\lvgl8\src\core\lv_obj.h \
+ c:\users\alber\desktop\insper\ -\ sem\ 5\embarcados\23b-emb-aps2-beco_rod_pivo\src\asf\thirdparty\lvgl8\src\core\lv_obj.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/msgbox/lv_msgbox.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/msgbox/../../../lvgl.h \
  ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/meter/lv_meter.h \
@@ -593,7 +593,7 @@ c:\program\ files\ (x86)\atmel\studio\7.0\toolchain\arm\arm-gnu-toolchain\arm-no
 
 ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/list/../../layouts/flex/lv_flex.h:
 
-c:\users\rodri\documents\insper\5_semestre\compemb\23b-emb-aps2-beco_rod_pivo\src\asf\thirdparty\lvgl8\src\core\lv_obj.h:
+c:\users\alber\desktop\insper\ -\ sem\ 5\embarcados\23b-emb-aps2-beco_rod_pivo\src\asf\thirdparty\lvgl8\src\core\lv_obj.h:
 
 ../src/ASF/thirdparty/lvgl8/src/extra/widgets/chart/../../../../src/extra/widgets/msgbox/lv_msgbox.h:
 

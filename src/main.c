@@ -28,6 +28,8 @@ static lv_color_t buf_1[LV_HOR_RES_MAX * LV_VER_RES_MAX];
 static lv_disp_drv_t disp_drv;          /*A variable to hold the drivers. Must be static or global.*/
 static lv_indev_drv_t indev_drv;
 
+static lv_obj_t * screen;
+
 /************************************************************************/
 /* RTOS                                                                 */
 /************************************************************************/
@@ -73,17 +75,19 @@ static void event_handler(lv_event_t * e) {
 }
 
 void lv_ex_btn_1(void) {
-	lv_obj_t * img = lv_img_create(lv_scr_act());
-	lv_img_set_src(img, &img_fundo);
-	lv_obj_align(img, LV_ALIGN_CENTER, 0, 0);
+	screen = lv_obj_create(NULL);
+	lv_obj_set_style_bg_color(screen, lv_color_hex(0x8ecfff), LV_PART_MAIN);
 	
-	lv_obj_t * img2 = lv_img_create(lv_scr_act());
+	
+	lv_obj_t * img2 = lv_img_create(screen);
 	lv_img_set_src(img2, &img_logo);
-	lv_obj_align(img2, LV_ALIGN_BOTTOM_LEFT, 0, 0);
+	lv_obj_align(img2, LV_ALIGN_TOP_LEFT, 0, 0);
+	lv_img_set_angle(img2, 900);
 
 
-	labelSetValue = lv_label_create(lv_scr_act());
-	lv_obj_align(labelSetValue, LV_ALIGN_LEFT_MID, -15 , -45);
+
+	labelSetValue = lv_label_create(screen);
+	lv_obj_align(labelSetValue, LV_ALIGN_TOP_MID, 0 , 5);
 	lv_obj_set_style_text_font(labelSetValue, &dseg50, LV_STATE_DEFAULT);
 	lv_obj_set_style_text_color(labelSetValue, lv_color_black(), LV_STATE_DEFAULT);
 	lv_label_set_text_fmt(labelSetValue, "%02d", 22);
@@ -91,6 +95,8 @@ void lv_ex_btn_1(void) {
 	char *c = lv_label_get_text(labelSetValue);
 	int tempo = atoi(c);
 	lv_label_set_text_fmt(labelSetValue, "%02d", tempo + 1);
+	
+	lv_scr_load(screen);
 }
 
 /************************************************************************/
@@ -101,6 +107,8 @@ static void task_lcd(void *pvParameters) {
 	int px, py;
 
 	lv_ex_btn_1();
+	
+	//rtc_get
 
 	for (;;)  {
 		lv_tick_inc(50);
@@ -162,8 +170,8 @@ void my_input_read(lv_indev_drv_t * drv, lv_indev_data_t*data) {
 	else
 		data->state = LV_INDEV_STATE_RELEASED; 
 	
-	data->point.x = px;
-	data->point.y = py;
+	data->point.x = py;
+	data->point.y = 320 - px;
 }
 
 void configure_lvgl(void) {
@@ -197,6 +205,7 @@ int main(void) {
 
 	/* LCd, touch and lvgl init*/
 	configure_lcd();
+	ili9341_set_orientation(ILI9341_FLIP_Y | ILI9341_SWITCH_XY);
 	configure_touch();
 	configure_lvgl();
 
