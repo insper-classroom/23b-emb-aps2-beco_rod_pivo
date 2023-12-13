@@ -6,6 +6,8 @@ src\ASF\sam\drivers\rtc\rtc.c
 
 src\ASF\sam\drivers\rtt\rtt.c
 
+src\ASF\sam\drivers\tc\tc.c
+
 src\ASF\thirdparty\lvgl8\examples\anim\lv_example_anim_1.c
 
 src\ASF\thirdparty\lvgl8\examples\anim\lv_example_anim_2.c
@@ -623,6 +625,8 @@ src\ASF\thirdparty\lvgl8\tests\src\test_fonts\font_3.c
 src\ASF\thirdparty\lvgl8\tests\unity\unity.c
 
 src\ASF\thirdparty\lvgl8\tests\unity\unity_support.c
+
+src\dseg30.c
 
 src\dseg50.c
 

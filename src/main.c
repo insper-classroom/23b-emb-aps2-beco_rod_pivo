@@ -7,9 +7,16 @@
 
 #include <asf.h>
 #include <string.h>
+#include "arm_math.h"
 #include "ili9341.h"
 #include "lvgl.h"
 #include "touch/touch.h"
+
+#define PULSO_PIO 		 PIOA
+#define PULSO_PIO_ID 	 ID_PIOA
+#define PULSO_PIO_IDX	 19
+#define PULSO_PIO_IDX_MASK (1u << PULSO_PIO_IDX)
+
 
 /************************************************************************/
 /* LCD / LVGL                                                           */
@@ -18,6 +25,7 @@
 #define LV_HOR_RES_MAX          (240)
 #define LV_VER_RES_MAX          (320)
 
+LV_FONT_DECLARE(dseg30);
 LV_FONT_DECLARE(dseg50);
 
 /*A static or global variable to store the buffers*/
@@ -28,27 +36,32 @@ static lv_color_t buf_1[LV_HOR_RES_MAX * LV_VER_RES_MAX];
 static lv_disp_drv_t disp_drv;          /*A variable to hold the drivers. Must be static or global.*/
 static lv_indev_drv_t indev_drv;
 
-static lv_obj_t * screen;
-
-typedef struct  {
-	uint32_t year;
-	uint32_t month;
-	uint32_t day;
-	uint32_t week;
-	uint32_t hour;
-	uint32_t minute;
-	uint32_t second;
-} calendar;
-
-/************************************************************************/
-/* RTOS                                                                 */
-/************************************************************************/
-
 #define TASK_LCD_STACK_SIZE                (1024*6/sizeof(portSTACK_TYPE))
 #define TASK_LCD_STACK_PRIORITY            (tskIDLE_PRIORITY)
 
 #define TASK_RTC_STACK_SIZE				   (1024*6/sizeof(portSTACK_TYPE))
 #define TASK_RTC_STACK_PRIORITY			   (tskIDLE_PRIORITY)
+
+#define TASK_SIMULATOR_STACK_SIZE 			(4096 / sizeof(portSTACK_TYPE))
+#define TASK_SIMULATOR_STACK_PRIORITY 		(tskIDLE_PRIORITY)
+
+xSemaphoreHandle xSemaphoreHorario;
+
+xQueueHandle xQueuePulso;
+
+SemaphoreHandle_t xMutex;
+
+#define RTT_FREQ 5000
+
+#define RAIO 0.508/2
+#define VEL_MAX_KMH  5.0f
+#define VEL_MIN_KMH  0.5f
+//#define RAMP 
+
+
+/************************************************************************/
+/* RTOS                                                                 */
+/************************************************************************/
 
 extern void vApplicationStackOverflowHook(xTaskHandle *pxTask,  signed char *pcTaskName);
 extern void vApplicationIdleHook(void);
@@ -69,14 +82,37 @@ extern void vApplicationMallocFailedHook(void) {
 	configASSERT( ( volatile void * ) NULL );
 }
 
-void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type);
-
 /************************************************************************/
 /* lvgl                                                                 */
 /************************************************************************/
 
-volatile lv_obj_t * labelSetValue;
+typedef struct  {
+	uint32_t year;
+	uint32_t month;
+	uint32_t day;
+	uint32_t week;
+	uint32_t hour;
+	uint32_t minute;
+	uint32_t second;
+} calendar;
 
+static lv_obj_t * screen;
+volatile lv_obj_t * labelSetValue;
+volatile lv_obj_t * labelVelocidade;
+
+void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type);
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
+
+float kmh_to_hz(float vel, float raio) {
+    float f = vel / (2*PI*raio*3.6);
+    return(f);
+}
+
+void pulso_callback(void) {
+	uint32_t value = rtt_read_timer_value(RTT);
+	RTT_init(RTT_FREQ, 0, 0);
+	xQueueSendFromISR(xQueuePulso, &value, 0);
+}
 
 static void event_handler(lv_event_t * e) {
 	lv_event_code_t code = lv_event_get_code(e);
@@ -89,6 +125,32 @@ static void event_handler(lv_event_t * e) {
 	}
 }
 
+void RTC_Handler(void) {
+    uint32_t ul_status = rtc_get_status(RTC);
+	
+    /* seccond tick */
+    if ((ul_status & RTC_SR_SEC) == RTC_SR_SEC) {	
+		// o código para irq de segundo vem aqui
+		xSemaphoreGiveFromISR(xSemaphoreHorario, 0);
+    }
+	
+    /* Time or date alarm */
+    if ((ul_status & RTC_SR_ALARM) == RTC_SR_ALARM) {
+    	// o código para irq de alame vem aqui
+    }
+
+	rtc_clear_status(RTC, RTC_SCCR_SECCLR);
+}
+
+void RTT_Handler(void) {
+	uint32_t ul_status;
+	ul_status = rtt_get_status(RTT);
+
+	/* IRQ due to Alarm */
+	if ((ul_status & RTT_SR_ALMS) == RTT_SR_ALMS) {
+	}
+}
+
 void lv_ex_btn_1(void) {
 	screen = lv_obj_create(NULL);
 	lv_obj_set_style_bg_color(screen, lv_color_hex(0x8ecfff), LV_PART_MAIN);
@@ -96,20 +158,20 @@ void lv_ex_btn_1(void) {
 	
 	lv_obj_t * img2 = lv_img_create(screen);
 	lv_img_set_src(img2, &img_logo);
-	lv_obj_align(img2, LV_ALIGN_TOP_LEFT, 0, 0);
+	lv_obj_align(img2, LV_ALIGN_TOP_LEFT, 7, 3);
 	lv_img_set_angle(img2, 900);
 
-
-
 	labelSetValue = lv_label_create(screen);
-	lv_obj_align(labelSetValue, LV_ALIGN_TOP_MID, 0 , 5);
-	lv_obj_set_style_text_font(labelSetValue, &dseg50, LV_STATE_DEFAULT);
+	lv_obj_align_to(labelSetValue, img2, LV_ALIGN_RIGHT_MID, 35, -5);
+	lv_obj_set_style_text_font(labelSetValue, &dseg30, LV_STATE_DEFAULT);
 	lv_obj_set_style_text_color(labelSetValue, lv_color_black(), LV_STATE_DEFAULT);
-	lv_label_set_text_fmt(labelSetValue, "%02d", 22);
+	lv_label_set_text_fmt(labelSetValue, "%02d:%02d:%02d", 0, 0, 0);
 
-	char *c = lv_label_get_text(labelSetValue);
-	int tempo = atoi(c);
-	lv_label_set_text_fmt(labelSetValue, "%02d", tempo + 1);
+	labelVelocidade = lv_label_create(screen);
+	lv_obj_align(labelVelocidade, LV_ALIGN_CENTER, 40, 0);
+	lv_obj_set_style_text_font(labelVelocidade, &dseg50, LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelVelocidade, lv_color_black(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelVelocidade, "%02d", 0);
 	
 	lv_scr_load(screen);
 }
@@ -118,30 +180,85 @@ void lv_ex_btn_1(void) {
 /* TASKS                                                                */
 /************************************************************************/
 
-static void task_rtc(void *pvParameters) {
-	/** Configura RTC */
-	calendar rtc_initial = {2018, 3, 19, 12, 15, 45 ,1};
-	RTC_init(RTC, ID_RTC, rtc_initial, 0);
-	
-	uint32_t current_hour, current_min, current_sec;
-	rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
-	
-/*	RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);*/
-	
-	
-}
-
 static void task_lcd(void *pvParameters) {
 	int px, py;
 
 	lv_ex_btn_1();
-	
-	//rtc_get
 
 	for (;;)  {
+		xSemaphoreTake(xMutex, portMAX_DELAY);
 		lv_tick_inc(50);
 		lv_task_handler();
+		xSemaphoreGive(xMutex);
 		vTaskDelay(50);
+	}
+}
+static void task_rtc(void *pvParameters) {
+	/** Configura RTC */
+	calendar rtc_initial = {2018, 3, 19, 12, 15, 45 ,1};
+	RTC_init(RTC, ID_RTC, rtc_initial, RTC_IER_SECEN);
+	
+	uint32_t current_hour, current_min, current_sec;
+
+	uint32_t pulso;
+
+	for (;;) {
+		if (xSemaphoreTake(xSemaphoreHorario, 0) == pdTRUE) {
+			rtc_get_time(RTC, &current_hour, &current_min, &current_sec);
+
+			xSemaphoreTake(xMutex, portMAX_DELAY);
+
+			lv_label_set_text_fmt(labelSetValue, "%02d:%02d:%02d", current_hour, current_min, current_sec);
+
+			xSemaphoreGive(xMutex);
+		}
+
+		if (xQueueReceive(xQueuePulso, &pulso, 0) == pdTRUE) {
+			double dt_secs = ((double) pulso / RTT_FREQ);
+			double f_hz = ((double) 1.0 / dt_secs);
+			double w_rads_per_sec = ((double)2 * PI * f_hz);
+			double v_km_per_hour =  ((double)w_rads_per_sec * RAIO) * 3.6;
+
+			lv_label_set_text_fmt(labelVelocidade, "%d km/h", ((int)v_km_per_hour));
+
+		}
+	}
+}
+
+static void task_simulador(void *pvParameters) {
+
+	pmc_enable_periph_clk(ID_PIOC);
+	pio_set_output(PIOC, PIO_PC31, 1, 0, 0);
+
+	float vel = VEL_MAX_KMH;
+	float f;
+	int ramp_up = 1;
+
+	while(1){
+		pio_clear(PIOC, PIO_PC31);
+		delay_ms(1);
+		pio_set(PIOC, PIO_PC31);
+		#ifdef RAMP
+		if (ramp_up) {
+			printf("[SIMU] ACELERANDO: %d \n", (int) (10*vel));
+			vel += 0.5;
+			} else {
+			printf("[SIMU] DESACELERANDO: %d \n",  (int) (10*vel));
+			vel -= 0.5;
+		}
+
+		if (vel >= VEL_MAX_KMH)
+		ramp_up = 0;
+		else if (vel <= VEL_MIN_KMH)
+		ramp_up = 1;
+		#else
+		vel = 5;
+		printf("[SIMU] CONSTANTE: %d \n", (int) (10*vel));
+		#endif
+		f = kmh_to_hz(vel, RAIO);
+		int t = 965*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
+		//para compensar o atraso gerado pelo Escalonador do freeRTOS
+		delay_ms(t);
 	}
 }
 
@@ -177,26 +294,66 @@ static void configure_console(void) {
 	setbuf(stdout, NULL);
 }
 
-void RTC_init(Rtc rtc, uint32_t id_rtc, calendar t, uint32_t irq_type) {
-	// Configura o PMC 
+void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type) {
+	/* Configura o PMC */
 	pmc_enable_periph_clk(ID_RTC);
-
-	// Default RTC configuration, 24-hour mode 
+	
+	/* Default RTC configuration, 24-hour mode */
 	rtc_set_hour_mode(rtc, 0);
-
-	// Configura data e hora manualmente 
+	
+	/* Configura data e hora manualmente */
 	rtc_set_date(rtc, t.year, t.month, t.day, t.week);
 	rtc_set_time(rtc, t.hour, t.minute, t.second);
-
-	// Configure RTC interrupts 
+	
+	/* Configure RTC interrupts */
 	NVIC_DisableIRQ(id_rtc);
 	NVIC_ClearPendingIRQ(id_rtc);
 	NVIC_SetPriority(id_rtc, 4);
 	NVIC_EnableIRQ(id_rtc);
+	
+	rtc_enable_interrupt(rtc, irq_type);
 
-	// Ativa interrupcao via alarme 
-	rtc_enable_interrupt(rtc,  irq_type);
+}
+
+void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource) {
+
+	uint16_t pllPreScale = (int) (((float) 32768) / freqPrescale);
+	
+	rtt_sel_source(RTT, false);
+	rtt_init(RTT, pllPreScale);
+	
+	if (rttIRQSource & RTT_MR_ALMIEN) {
+		uint32_t ul_previous_time;
+		ul_previous_time = rtt_read_timer_value(RTT);
+		while (ul_previous_time == rtt_read_timer_value(RTT));
+		rtt_write_alarm_time(RTT, IrqNPulses+ul_previous_time);
 	}
+
+	/* config NVIC */
+	NVIC_DisableIRQ(RTT_IRQn);
+	NVIC_ClearPendingIRQ(RTT_IRQn);
+	NVIC_SetPriority(RTT_IRQn, 4);
+	NVIC_EnableIRQ(RTT_IRQn);
+
+	/* Enable RTT interrupt */
+	if (rttIRQSource & (RTT_MR_RTTINCIEN | RTT_MR_ALMIEN))
+	rtt_enable_interrupt(RTT, rttIRQSource);
+	else
+	rtt_disable_interrupt(RTT, RTT_MR_RTTINCIEN | RTT_MR_ALMIEN);
+	
+}
+
+void configure_pulso(void) {
+	pmc_enable_periph_clk(PULSO_PIO_ID);
+	pio_configure(PULSO_PIO, PIO_INPUT, PULSO_PIO_IDX_MASK, 0);
+	pio_handler_set(PULSO_PIO, PULSO_PIO_ID, PULSO_PIO_IDX_MASK, PIO_IT_FALL_EDGE, pulso_callback);
+
+	pio_enable_interrupt(PULSO_PIO, PULSO_PIO_IDX_MASK);
+	pio_get_interrupt_status(PULSO_PIO);
+
+	NVIC_EnableIRQ(PULSO_PIO_ID);
+	NVIC_SetPriority(PULSO_PIO_ID, 5);
+}
 
 /************************************************************************/
 /* port lvgl                                                            */
@@ -257,6 +414,22 @@ int main(void) {
 	ili9341_set_orientation(ILI9341_FLIP_Y | ILI9341_SWITCH_XY);
 	configure_touch();
 	configure_lvgl();
+	configure_pulso();
+
+	xSemaphoreHorario = xSemaphoreCreateBinary();
+	if (xSemaphoreHorario == NULL) {
+		printf("Failed to create semaphore \n");
+	}
+
+	xMutex = xSemaphoreCreateMutex();
+	if (xMutex == NULL){
+		printf("Failed to create mutex\n");
+	}
+
+	xQueuePulso = xQueueCreate(32, sizeof(uint32_t));
+	if (xQueuePulso == NULL) {
+		printf("Failed to create queue\n");
+	}
 
 	/* Create task to control oled */
 	if (xTaskCreate(task_lcd, "LCD", TASK_LCD_STACK_SIZE, NULL, TASK_LCD_STACK_PRIORITY, NULL) != pdPASS) {
@@ -264,8 +437,12 @@ int main(void) {
 	}
 	
 	if (xTaskCreate(task_rtc, "RTC", TASK_RTC_STACK_SIZE, NULL, TASK_RTC_STACK_PRIORITY, NULL) != pdPASS) {
-		printf("Failed to create lcd task\r\n");
+		printf("Failed to create rtc task\r\n");
 	}
+
+    if (xTaskCreate(task_simulador, "SIMUL", TASK_SIMULATOR_STACK_SIZE, NULL, TASK_SIMULATOR_STACK_PRIORITY, NULL) != pdPASS) {
+        printf("Failed to create simul task\r\n");
+    }
 	
 	/* Start the scheduler. */
 	vTaskStartScheduler();
