@@ -25,7 +25,7 @@
 #define LV_HOR_RES_MAX          (240)
 #define LV_VER_RES_MAX          (320)
 
-#define LV_FONT_DEFAULT &lv_font_montserrat_24
+#define LV_FONT_DEFAULT &lv_font_montserrat_26
 
 LV_FONT_DECLARE(dseg30);
 LV_FONT_DECLARE(dseg50);
@@ -58,7 +58,7 @@ SemaphoreHandle_t xMutex;
 #define RAIO 0.508/2
 #define VEL_MAX_KMH  5.0f
 #define VEL_MIN_KMH  0.5f
-//#define RAMP 
+#define RAMP 
 
 
 /************************************************************************/
@@ -102,13 +102,14 @@ static lv_obj_t * screen;
 volatile lv_obj_t * labelSetValue;
 volatile lv_obj_t * labelVelocidade;
 volatile lv_obj_t * labelKm;
+volatile lv_obj_t * labelAceleracao;
 
 void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type);
 void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
 
 float kmh_to_hz(float vel, float raio) {
-    float f = vel / (2*PI*raio*3.6);
-    return(f);
+	float f = vel / (2*PI*raio*3.6);
+	return(f);
 }
 
 void pulso_callback(void) {
@@ -180,6 +181,12 @@ void lv_ex_btn_1(void) {
 	lv_obj_align_to(labelKm, labelVelocidade, LV_ALIGN_BOTTOM_RIGHT, 65, 0);
 	lv_obj_set_style_text_color(labelKm, lv_color_black(), LV_STATE_DEFAULT);
 	lv_label_set_text_fmt(labelKm, "km/h");
+
+	labelAceleracao = lv_label_create(screen);
+	lv_obj_align(labelAceleracao,LV_ALIGN_BOTTOM_MID,0,-70);
+	lv_obj_set_style_text_font(labelAceleracao, LV_FONT_DEFAULT , LV_STATE_DEFAULT);
+	lv_obj_set_style_text_color(labelAceleracao, lv_color_black(), LV_STATE_DEFAULT);
+	lv_label_set_text(labelAceleracao,LV_SYMBOL_MINUS);
 	
 	lv_scr_load(screen);
 }
@@ -224,13 +231,20 @@ static void task_rtc(void *pvParameters) {
 		}
 
 		if (xQueueReceive(xQueuePulso, &pulso, 0) == pdTRUE) {
-			printf(&pulso);
 			double dt = ( pulso / RTT_FREQ);
 			double f = (1.0 / dt);
 			double w = (2 * PI * f);
 			double v = w * RAIO * 3.6;
 			
 			lv_label_set_text_fmt(labelVelocidade, "%02d", (int)v);
+
+			if (Abs(v - v_passado) < 0.01) {
+				lv_label_set_text(labelAceleracao, LV_SYMBOL_MINUS);
+			} else if (v < v_passado) {
+				lv_label_set_text(labelAceleracao, LV_SYMBOL_DOWN);
+			} else {
+				lv_label_set_text(labelAceleracao, LV_SYMBOL_UP);
+			}
 			
 			v_passado = v;	
 		}
@@ -268,7 +282,7 @@ static void task_simulador(void *pvParameters) {
 		printf("[SIMU] CONSTANTE: %d \n", (int) (10*vel));
 		#endif
 		f = kmh_to_hz(vel, RAIO);
-		int t = 720*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
+		int t = 600*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
 		//para compensar o atraso gerado pelo Escalonador do freeRTOS
 		delay_ms(t);
 	}
