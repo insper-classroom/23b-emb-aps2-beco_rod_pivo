@@ -25,6 +25,8 @@
 #define LV_HOR_RES_MAX          (240)
 #define LV_VER_RES_MAX          (320)
 
+#define LV_FONT_DEFAULT &lv_font_montserrat_24
+
 LV_FONT_DECLARE(dseg30);
 LV_FONT_DECLARE(dseg50);
 
@@ -51,7 +53,7 @@ xQueueHandle xQueuePulso;
 
 SemaphoreHandle_t xMutex;
 
-#define RTT_FREQ 5000
+#define RTT_FREQ 100
 
 #define RAIO 0.508/2
 #define VEL_MAX_KMH  5.0f
@@ -99,6 +101,7 @@ typedef struct  {
 static lv_obj_t * screen;
 volatile lv_obj_t * labelSetValue;
 volatile lv_obj_t * labelVelocidade;
+volatile lv_obj_t * labelKm;
 
 void RTC_init(Rtc *rtc, uint32_t id_rtc, calendar t, uint32_t irq_type);
 void RTT_init(float freqPrescale, uint32_t IrqNPulses, uint32_t rttIRQSource);
@@ -162,16 +165,21 @@ void lv_ex_btn_1(void) {
 	lv_img_set_angle(img2, 900);
 
 	labelSetValue = lv_label_create(screen);
-	lv_obj_align_to(labelSetValue, img2, LV_ALIGN_RIGHT_MID, 35, -5);
+	lv_obj_align_to(labelSetValue, img2, LV_ALIGN_RIGHT_MID, 50, 0);
 	lv_obj_set_style_text_font(labelSetValue, &dseg30, LV_STATE_DEFAULT);
 	lv_obj_set_style_text_color(labelSetValue, lv_color_black(), LV_STATE_DEFAULT);
 	lv_label_set_text_fmt(labelSetValue, "%02d:%02d:%02d", 0, 0, 0);
 
 	labelVelocidade = lv_label_create(screen);
-	lv_obj_align(labelVelocidade, LV_ALIGN_CENTER, 40, 0);
-	lv_obj_set_style_text_font(labelVelocidade, &dseg50, LV_STATE_DEFAULT);
+	lv_obj_align(labelVelocidade, LV_ALIGN_CENTER, -30, -10);
 	lv_obj_set_style_text_color(labelVelocidade, lv_color_black(), LV_STATE_DEFAULT);
+	lv_obj_set_style_text_font(labelVelocidade, &dseg50, LV_STATE_DEFAULT);
 	lv_label_set_text_fmt(labelVelocidade, "%02d", 0);
+
+	labelKm = lv_label_create(screen);
+	lv_obj_align_to(labelKm, labelVelocidade, LV_ALIGN_BOTTOM_RIGHT, 65, 0);
+	lv_obj_set_style_text_color(labelKm, lv_color_black(), LV_STATE_DEFAULT);
+	lv_label_set_text_fmt(labelKm, "km/h");
 	
 	lv_scr_load(screen);
 }
@@ -214,13 +222,12 @@ static void task_rtc(void *pvParameters) {
 		}
 
 		if (xQueueReceive(xQueuePulso, &pulso, 0) == pdTRUE) {
-			double dt_secs = ((double) pulso / RTT_FREQ);
-			double f_hz = ((double) 1.0 / dt_secs);
-			double w_rads_per_sec = ((double)2 * PI * f_hz);
-			double v_km_per_hour =  ((double)w_rads_per_sec * RAIO) * 3.6;
-
-			lv_label_set_text_fmt(labelVelocidade, "%d km/h", ((int)v_km_per_hour));
-
+			double dt = ((double) pulso / RTT_FREQ);
+			double f = ((double) 1.0 / dt);
+			double w = ((double)2 * PI * f);
+			int v = (int) (w * RAIO * 3.6);
+			
+			lv_label_set_text_fmt(labelVelocidade, "%02d", v);
 		}
 	}
 }
