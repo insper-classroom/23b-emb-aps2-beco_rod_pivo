@@ -209,6 +209,8 @@ static void task_rtc(void *pvParameters) {
 	uint32_t current_hour, current_min, current_sec;
 
 	uint32_t pulso;
+	
+	double v_passado;
 
 	for (;;) {
 		if (xSemaphoreTake(xSemaphoreHorario, 0) == pdTRUE) {
@@ -222,12 +224,15 @@ static void task_rtc(void *pvParameters) {
 		}
 
 		if (xQueueReceive(xQueuePulso, &pulso, 0) == pdTRUE) {
-			double dt = ((double) pulso / RTT_FREQ);
-			double f = ((double) 1.0 / dt);
-			double w = ((double)2 * PI * f);
-			int v = (int) (w * RAIO * 3.6);
+			printf(&pulso);
+			double dt = ( pulso / RTT_FREQ);
+			double f = (1.0 / dt);
+			double w = (2 * PI * f);
+			double v = w * RAIO * 3.6;
 			
-			lv_label_set_text_fmt(labelVelocidade, "%02d", v);
+			lv_label_set_text_fmt(labelVelocidade, "%02d", (int)v);
+			
+			v_passado = v;	
 		}
 	}
 }
@@ -263,7 +268,7 @@ static void task_simulador(void *pvParameters) {
 		printf("[SIMU] CONSTANTE: %d \n", (int) (10*vel));
 		#endif
 		f = kmh_to_hz(vel, RAIO);
-		int t = 965*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
+		int t = 720*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
 		//para compensar o atraso gerado pelo Escalonador do freeRTOS
 		delay_ms(t);
 	}
