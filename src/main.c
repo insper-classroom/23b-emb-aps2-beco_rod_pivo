@@ -53,7 +53,7 @@ xQueueHandle xQueuePulso;
 
 SemaphoreHandle_t xMutex;
 
-#define RTT_FREQ 100
+#define RTT_FREQ 5000
 
 #define RAIO 0.508/2
 #define VEL_MAX_KMH  5.0f
@@ -234,7 +234,7 @@ static void task_rtc(void *pvParameters) {
 			double dt = ( pulso / RTT_FREQ);
 			double f = (1.0 / dt);
 			double w = (2 * PI * f);
-			double v = w * RAIO * 3.6;
+			double v = w * RAIO * 3.6 * 10;
 			
 			lv_label_set_text_fmt(labelVelocidade, "%02d", (int)v);
 
@@ -282,7 +282,7 @@ static void task_simulador(void *pvParameters) {
 		printf("[SIMU] CONSTANTE: %d \n", (int) (10*vel));
 		#endif
 		f = kmh_to_hz(vel, RAIO);
-		int t = 600*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
+		int t = 400*(1.0/f); //UTILIZADO 965 como multiplicador ao inv�s de 1000
 		//para compensar o atraso gerado pelo Escalonador do freeRTOS
 		delay_ms(t);
 	}
